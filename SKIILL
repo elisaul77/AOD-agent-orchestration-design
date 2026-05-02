@@ -1,0 +1,318 @@
+---
+name: agent-orchestration-design
+description: Design pyramid-style orchestrated agent teams (Coordinator -> sub-coordinators -> specialists) for a given problem statement. Includes interview protocol, hierarchy design rules, file structure, YAML frontmatter templates, and workflow patterns. Load this skill before creating new agent orchestrations.
+---
+
+# Skill: Agent Orchestration Design
+
+Use this knowledge when you must design a **team of collaborating agents** to solve a user-defined problem. It consolidates the patterns proven in the `Dev*`, `Doc*`, and `Arch*` pipelines.
+
+---
+
+## 1. Core Principles
+
+### 1.1 The Pyramid Rule
+Every orchestration is a **pyramid**:
+
+```
+                 Top Coordinator
+                  (orchestrator)
+                 /      |       \
+         Analyst   Executor   Reviewer
+```
+
+- **Exactly ONE top-level Coordinator** per team.
+- Coordinator has **ZERO direct execution rights** — it only delegates.
+- Below the Coordinator sit three canonical roles: **Analyst** (research/inventory), **Executor** (does the work), **Reviewer** (QA).
+- When the domain has clearly separable sub-domains (e.g., frontend vs. backend, migration vs. integration), introduce **Sub-Coordinators**, each with their own Analyst/Executor/Reviewer underneath.
+
+### 1.2 The MANDATORY block (non-negotiable)
+Every Coordinator (top or sub) must include this block in its prompt:
+
+```markdown
+## ⛔ MANDATORY: ZERO DIRECT EXECUTION
+
+**You NEVER execute work directly. You ONLY orchestrate subagents.**
+
+- You NEVER {domain-specific direct action 1}.
+- You NEVER {domain-specific direct action 2}.
+- ALL work is delegated to your subagents: **{Agent1}**, **{Agent2}**, **{Agent3}**.
+- Your ONLY actions are: analyzing subagent results, drafting plans, presenting summaries to the user, writing plan/completion files, invoking subagents.
+
+If you catch yourself about to perform a direct operation, STOP and delegate.
+```
+
+### 1.3 Naming Convention
+**Format:** `{DomainPrefix}{Role}`
+
+- DomainPrefix: 3-5 char PascalCase (e.g., `Dev`, `Doc`, `Arch`, `Data`, `Sec`, `UI`, `Migrate`).
+- Role: standard set — `Conductor`, `Planner`, `Analyzer`, `Implementer`, `Extractor`, `Processor`, `Reviewer`. Pick the one that fits the action.
+- Sub-coordinators: `{DomainPrefix}{SubDomain}Conductor` (e.g., `DevFrontendConductor`, `DevBackendConductor`).
+- Avoid generic names like `planning-subagent`, `review-subagent` — they cause confusion across pipelines.
+
+### 1.4 File Layout
+```
+.github/
+  agents/
+    {DomainPrefix}Conductor.agent.md
+    {DomainPrefix}{Role1}.agent.md
+    {DomainPrefix}{Role2}.agent.md
+    {DomainPrefix}{Role3}.agent.md
+  skills/
+    {domain-name-kebab}/
+      SKILL.md        # optional: domain-specific knowledge for the team
+```
+
+---
+
+## 2. Interview Protocol (Before Designing Anything)
+
+Ask the user these questions **in order**. Stop as soon as you have enough to design the pyramid.
+
+### Q1 — Starting point
+> ¿Partimos de una carpeta vacía o de un proyecto existente que debo estudiar primero?
+
+If existing: perform a workspace scan (README, folder structure, key files, `.github/copilot-instructions.md`) before continuing.
+
+### Q2 — Purpose / problem statement
+> Descríbeme en 1-3 frases: **qué problema** quieres resolver y **cuál es el entregable final** esperado.
+
+### Q3 — Input artifact(s)
+> ¿Con qué material entra el equipo de agentes? Opciones típicas: código fuente, documentos (PDF/Word), datos (CSV/BD), APIs, UI, mix.
+
+### Q4 — Output artifact(s)
+> ¿Qué entrega el equipo cuando termina? Opciones típicas: código nuevo + tests, documentación Markdown estructurada, dataset procesado, reporte, deployment.
+
+### Q5 — Subdominios
+> ¿El problema tiene sub-dominios claramente separables que justifiquen **sub-coordinadores** (ej: backend + frontend, migración + integración)? Si sí, ¿cuáles?
+
+### Q6 — Capacidades especiales requeridas
+Checklist (marca las que aplican):
+- [ ] TDD / pruebas automatizadas
+- [ ] Extracción de imágenes + descripción con visión
+- [ ] Verificación en navegador (UI)
+- [ ] Ejecución de terminal / scripts
+- [ ] Acceso a repos externos (GitHub)
+- [ ] Consultas web / documentación externa
+- [ ] Manipulación de notebooks Jupyter
+- [ ] Browser automation (clicks, formularios)
+
+### Q7 — Puntos de pausa con el usuario
+> ¿En qué momentos el Coordinador debe **detenerse obligatoriamente** a esperar tu confirmación? Defaults seguros: (1) tras presentar el plan, (2) tras cada fase revisada, (3) al cerrar el proceso.
+
+### Q8 — Idioma y convenciones corporativas
+> ¿Idioma de salida (español/inglés)? ¿Hay convenciones corporativas (paleta de colores, plantillas, glosario) que los agentes deban respetar?
+
+---
+
+## 3. Decision Rules
+
+### 3.1 When to add Sub-Coordinators
+Add a sub-coordinator **only if ALL three** are true:
+1. The sub-domain has its own distinct workflow (different tools, different reviewer criteria).
+2. Running its phases in parallel with the other sub-domain creates real value.
+3. A single Analyst/Executor/Reviewer trio cannot handle both sub-domains efficiently.
+
+If any condition fails → keep a flat pyramid (Coordinator + trio). **Avoid over-engineering.**
+
+### 3.2 When to merge Analyst + Executor
+Only merge if the analysis is trivial (< 10% of phase effort). Otherwise keep them separate — clean separation of "know" from "do" improves quality.
+
+### 3.3 When to split Reviewer
+Split the Reviewer role **only if** output verification requires fundamentally different skills (e.g., `CodeReviewer` + `UXReviewer` for a fullstack team).
+
+### 3.4 Tool assignment per role
+| Role | Typical tools |
+|------|---------------|
+| Conductor | `agent/runSubagent`, `edit/createFile` (for plan files only), `read/readFile`, `todo` |
+| Analyst/Planner | `search/*`, `read/readFile`, `read/viewImage` (if visual), `fetch` (if web research) |
+| Executor/Implementer | `edit/*`, `execute/runInTerminal`, `runCommands`, `read/viewImage` (if vision needed), domain-specific |
+| Reviewer | `search/*`, `read/readFile`, `problems`, `changes`, `browser` (if UI) |
+
+**Never give the Conductor execution tools** (runInTerminal, runCommands, edit/editFiles beyond plan files). This enforces the MANDATORY rule at the tool level.
+
+---
+
+## 4. Standard Agent File Templates
+
+### 4.1 Coordinator template
+```markdown
+---
+description: '{One-line purpose of this orchestration}'
+tools: [agent/runSubagent, edit/createDirectory, edit/createFile, read/readFile, read/problems, search/listDirectory, search/fileSearch, search/textSearch, search/codebase, todo]
+model: Claude Opus 4.7 (copilot)
+agents:
+  - {Agent1}
+  - {Agent2}
+  - {Agent3}
+---
+You are the **{DomainPrefix}Conductor** — the orchestrator for {lifecycle phrase}.
+
+## ⛔ MANDATORY: ZERO DIRECT EXECUTION
+{Insert the block from §1.2}
+
+Lifecycle: **{Phase A} -> {Phase B} -> {Phase C} -> {Checkpoint}**, repeated until complete.
+
+<workflow>
+## Phase 1: {Analysis name}
+1. Receive input from user.
+2. Delegate to **{Analyst}** via #runSubagent.
+3. Draft plan following <plan_style_guide>.
+4. Present plan to user.
+5. **MANDATORY STOP**: wait for approval.
+6. Write plan file to `plans/<task-slug>-plan.md`.
+
+## Phase 2: Execution Cycle (per phase)
+### 2A. Execute
+#runSubagent **{Executor}** with objective + context.
+### 2B. Review
+#runSubagent **{Reviewer}** with acceptance criteria.
+- APPROVED → proceed
+- NEEDS_REVISION → return to 2A
+- FAILED → consult user
+### 2C. Checkpoint
+Present summary, write phase-N-complete.md, **MANDATORY STOP**.
+
+## Phase 3: Completion
+Write completion file, present to user.
+</workflow>
+
+<subagent_instructions>
+Use EXACT names:
+**{Analyst}**: {what to provide, what NOT to do}
+**{Executor}**: {what to provide, what NOT to do}
+**{Reviewer}**: {what to provide, what NOT to do}
+</subagent_instructions>
+
+<plan_style_guide>...</plan_style_guide>
+<phase_complete_style_guide>...</phase_complete_style_guide>
+<stopping_rules>...</stopping_rules>
+<state_tracking>...</state_tracking>
+```
+
+### 4.2 Analyst template
+```markdown
+---
+description: {One-line purpose}
+argument-hint: {what input the Coordinator must provide}
+tools: ['search', 'listDirectory', 'fileSearch', 'textSearch', 'readFile', 'fetch']
+model: Claude Sonnet 4.6 (copilot)
+---
+You are **{DomainPrefix}{AnalystName}** — an analysis subagent called by **{DomainPrefix}Conductor**.
+
+Your SOLE job is {analysis mission}. DO NOT {forbidden actions}.
+
+<workflow>
+1. {Step 1}
+2. {Step 2}
+...
+5. Stop at 90% confidence when you can answer: {list key questions}
+6. Return findings
+</workflow>
+
+<output_format>
+{structured template}
+</output_format>
+
+<research_guidelines>
+- Work autonomously, no pauses
+- {other guidelines}
+</research_guidelines>
+```
+
+### 4.3 Executor template
+```markdown
+---
+description: {One-line purpose}
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'runInTerminal', 'listDirectory', 'readFile', 'createDirectory', 'createFile', 'todos']
+model: {model}
+---
+You are **{DomainPrefix}{ExecutorName}** — receives focused phase tasks from **{DomainPrefix}Conductor**.
+
+Your scope: execute the phase task. The Conductor handles tracking, completion files, commits.
+
+## Phase-type workflows
+### Phase Type A — {name}
+{steps}
+### Phase Type B — {name}
+{steps}
+...
+
+When uncertain → STOP and present options.
+Task completion → summarize, report back.
+```
+
+### 4.4 Reviewer template
+```markdown
+---
+description: {One-line purpose}
+tools: ['search', 'readFile', 'problems', 'changes']
+model: Claude Sonnet 4.6 (copilot)
+---
+You are **{DomainPrefix}{ReviewerName}** — called after **{DomainPrefix}{Executor}** completes.
+
+<review_workflow>
+1. Inspect outputs
+2. Verify against acceptance criteria
+3. Provide structured feedback (Status/Summary/Issues/Recommendations)
+</review_workflow>
+
+<output_format>
+## Review: {Phase Name}
+**Status:** APPROVED | NEEDS_REVISION | FAILED
+**Summary:** ...
+**Strengths:** ...
+**Issues Found:** [CRITICAL|MAJOR|MINOR]
+**Recommendations:** ...
+**Next Steps:** ...
+</output_format>
+
+Never modify files. Review only.
+```
+
+---
+
+## 5. Pyramid Visualization Template
+
+Always present the proposed pyramid as a Mermaid diagram before creating files:
+
+```mermaid
+graph TB
+    C[{DomainPrefix}Conductor]
+    C --> A[{Analyst}]
+    C --> E[{Executor}]
+    C --> R[{Reviewer}]
+    
+    %% For multi-subdomain teams:
+    %% C --> SC1[{SubDomainA}Conductor]
+    %% SC1 --> A1[{SubDomainA}{Analyst}]
+    %% SC1 --> E1[{SubDomainA}{Executor}]
+    %% SC1 --> R1[{SubDomainA}{Reviewer}]
+```
+Apply  palette if the workspace uses it, otherwise default to neutral tones. Use clear labels and consistent shapes for roles. This visual serves as a blueprint for the team structure and must be approved by the user before proceeding with file creation.
+---
+
+## 6. Anti-patterns to Avoid
+
+- ❌ Generic names (`planning-subagent`, `review-subagent`) across pipelines
+- ❌ Giving the Conductor execution tools
+- ❌ Skipping the MANDATORY block
+- ❌ Creating sub-coordinators for flat problems
+- ❌ Merging Analyst into Conductor (Coordinator must NEVER research directly)
+- ❌ Omitting the Reviewer role — quality gates are non-negotiable
+- ❌ Forgetting `agents:` list in Conductor frontmatter
+- ❌ Forgetting the corporate language / palette when the workspace requires it
+
+---
+
+## 7. Output Checklist (before delivering)
+
+- [ ] All agent files created in `.github/agents/` with `.agent.md` extension
+- [ ] Conductor contains the MANDATORY block verbatim
+- [ ] Conductor references subagents by EXACT name in both `agents:` frontmatter and `<subagent_instructions>`
+- [ ] Every subagent has: `description`, `tools`, `model` frontmatter
+- [ ] Every subagent states "called by parent **{DomainPrefix}Conductor**"
+- [ ] Reviewer's output format includes `Status (APPROVED/NEEDS_REVISION/FAILED)`
+- [ ] Stopping rules enumerated (at least 3 pause points)
+- [ ] Optional: domain-specific `SKILL.md` created if the team needs shared knowledge
+- [ ] Mermaid pyramid presented and approved by user
