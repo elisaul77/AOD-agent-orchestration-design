@@ -70,38 +70,38 @@ If you catch yourself about to perform a direct operation, STOP and delegate.
 Ask the user these questions **in order**. Stop as soon as you have enough to design the pyramid.
 
 ### Q1 — Starting point
-> ¿Partimos de una carpeta vacía o de un proyecto existente que debo estudiar primero?
+> Are we starting from an empty folder or an existing project that I should study first?
 
 If existing: perform a workspace scan (README, folder structure, key files, `.github/copilot-instructions.md`) before continuing.
 
 ### Q2 — Purpose / problem statement
-> Descríbeme en 1-3 frases: **qué problema** quieres resolver y **cuál es el entregable final** esperado.
+> Describe in 1-3 sentences: **what problem** you want to solve and **what the expected final deliverable** is.
 
 ### Q3 — Input artifact(s)
-> ¿Con qué material entra el equipo de agentes? Opciones típicas: código fuente, documentos (PDF/Word), datos (CSV/BD), APIs, UI, mix.
+> What material does the agent team start with? Typical options: source code, documents (PDF/Word), data (CSV/DB), APIs, UI, mix.
 
 ### Q4 — Output artifact(s)
-> ¿Qué entrega el equipo cuando termina? Opciones típicas: código nuevo + tests, documentación Markdown estructurada, dataset procesado, reporte, deployment.
+> What does the team deliver when finished? Typical options: new code + tests, structured Markdown documentation, processed dataset, report, deployment.
 
-### Q5 — Subdominios
-> ¿El problema tiene sub-dominios claramente separables que justifiquen **sub-coordinadores** (ej: backend + frontend, migración + integración)? Si sí, ¿cuáles?
+### Q5 — Sub-domains
+> Does the problem have clearly separable sub-domains that justify **sub-coordinators** (e.g.: backend + frontend, migration + integration)? If so, which ones?
 
-### Q6 — Capacidades especiales requeridas
-Checklist (marca las que aplican):
-- [ ] TDD / pruebas automatizadas
-- [ ] Extracción de imágenes + descripción con visión
-- [ ] Verificación en navegador (UI)
-- [ ] Ejecución de terminal / scripts
-- [ ] Acceso a repos externos (GitHub)
-- [ ] Consultas web / documentación externa
-- [ ] Manipulación de notebooks Jupyter
-- [ ] Browser automation (clicks, formularios)
+### Q6 — Special capabilities required
+Checklist (check those that apply):
+- [ ] TDD / automated tests
+- [ ] Image extraction + description with vision
+- [ ] Browser verification (UI)
+- [ ] Terminal / script execution
+- [ ] Access to external repos (GitHub)
+- [ ] Web queries / external documentation
+- [ ] Jupyter notebook manipulation
+- [ ] Browser automation (clicks, forms)
 
-### Q7 — Puntos de pausa con el usuario
-> ¿En qué momentos el Coordinador debe **detenerse obligatoriamente** a esperar tu confirmación? Defaults seguros: (1) tras presentar el plan, (2) tras cada fase revisada, (3) al cerrar el proceso.
+### Q7 — User pause points
+> At what moments should the Coordinator **mandatorily stop** to wait for your confirmation? Safe defaults: (1) after presenting the plan, (2) after each reviewed phase, (3) when closing the process.
 
-### Q8 — Idioma y convenciones corporativas
-> ¿Idioma de salida (español/inglés)? ¿Hay convenciones corporativas (paleta de colores, plantillas, glosario) que los agentes deban respetar?
+### Q8 — Output language and corporate conventions
+> Output language (Spanish/English)? Are there corporate conventions (color palette, templates, glossary) that agents should respect?
 
 ---
 
